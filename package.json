@@ -1,7 +1,8 @@
 {
   "name": "frenchtarot-counter",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "homepage": "https://cinlloc.github.io/frenchtarot-counter/",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
