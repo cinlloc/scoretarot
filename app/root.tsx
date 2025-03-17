@@ -7,13 +7,12 @@ import {
   ScrollRestoration,
 } from "react-router";
 
-import type { Route } from "./+types/root";
-import "./app.css";
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
-
+import type { Route } from "./+types/root";
+import "./app.css";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (

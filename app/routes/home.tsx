@@ -12,10 +12,10 @@ export default function Home() {
   }
 
   return (
-    <div className="home">
+    <main>
       <img className="home-logo" src={logo} alt="Logo" />
       <p>ScoreTarot : l'application pour compter les points au tarot !</p>
       <Button variant="contained" onClick={() => setToNewDonne(true)}>Nouvelle donne</Button>
-    </div>
+    </main>
   );
 }
