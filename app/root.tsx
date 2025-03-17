@@ -22,7 +22,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <title>ScoreTarot : l'application pour compter les points au tarot !</title>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="favicon.ico" />
         <Meta />
         <Links />
       </head>
