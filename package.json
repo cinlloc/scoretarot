@@ -1,6 +1,7 @@
 {
-  "name": "scoretarot-router",
-  "private": true,
+  "name": "scoretarot",
+  "private": false,
+  "homepage": "https://cinlloc.github.io/scoretarot/",
   "type": "module",
   "scripts": {
     "build": "react-router build",
