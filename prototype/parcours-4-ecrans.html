@@ -1,0 +1,414 @@
+<title>ScoreTarot · parcours</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* PROTOTYPE jetable (issue cinlloc/scoretarot#1), itération 3 : les 4 écrans dans la direction retenue (table de jeu, synthèse S),
+   en sombre et en clair. Un téléphone au centre, la barre flottante en bas pour changer d'écran et de thème. Données d'exemple, en mémoire. */
+:root{
+  --bg:#eceff3; --fg:#141922; --muted:#5a6472; --line:#d3d9e1; --panel:#ffffff; --accent:#2747c4; --sw-bg:#141922; --sw-fg:#ffffff;
+  --f-ui:"Inter",system-ui,sans-serif; --f-head:"Space Grotesk","Inter",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --fg:#e5e9ef; --muted:#98a2b0; --line:#29303a; --panel:#161b22; --accent:#8ea4ff; --sw-bg:#f1f3f6; --sw-fg:#141922; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --fg:#e5e9ef; --muted:#98a2b0; --line:#29303a; --panel:#161b22; --accent:#8ea4ff; --sw-bg:#f1f3f6; --sw-fg:#141922; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 110px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+svg.i{width:1em;height:1em;flex:none;vertical-align:-.15em}
+.top{max-width:1040px;margin:0 auto 20px;display:flex;flex-direction:column;gap:6px}
+.top h1{font-family:var(--f-head);font-size:1.6rem;margin:0;text-wrap:balance}
+.top p{margin:0;color:var(--muted);max-width:70ch;line-height:1.5}
+.stage{max-width:1040px;margin:0 auto;display:flex;gap:28px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.phone{width:min(380px,100%);height:780px;border-radius:40px;padding:10px;background:#0b0d10;box-shadow:0 20px 50px rgba(10,20,40,.25);flex:none}
+.notes{flex:1 1 300px;max-width:380px;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;font-size:.88rem;line-height:1.5}
+.notes h2{font-family:var(--f-head);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+.notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.notes .tag{display:inline-block;font-size:.72rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-top:12px}
+.switcher{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:50;max-width:calc(100% - 32px);
+  display:flex;align-items:center;gap:2px;background:var(--sw-bg);color:var(--sw-fg);border-radius:999px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,.3);font-family:var(--f-head)}
+.switcher button{background:transparent;border:0;min-width:40px;height:40px;border-radius:999px;font-size:1.1rem;color:inherit;padding:0 8px}
+.switcher button:hover{background:rgba(127,127,127,.25)}
+.switcher span{padding:0 8px;font-weight:700;white-space:nowrap;font-size:.92rem;overflow:hidden;text-overflow:ellipsis}
+.switcher .sep{width:1px;height:24px;background:rgba(127,127,127,.4);margin:0 4px}
+
+/* ---------- l'app : direction « table de jeu », tokens sombre (défaut) et clair ---------- */
+.app{--felt:#2f3e37;--felt2:#1b2621;--txt:#eaf3ee;--mute:#a7bcb1;--line:rgba(255,255,255,.18);--tint:rgba(255,255,255,.08);--tint2:rgba(255,255,255,.16);
+  --sunk:rgba(0,0,0,.28);--gold:#e4b84e;--on-gold:#18231d;--sheet:#f7f4ec;--sheet-ink:#18231d;--sheet-mute:#6c7468;--sheet-line:#e3ddcc;
+  --pos:#7fe0ae;--neg:#ff9aa2;--spos:#127a4a;--sneg:#b4232f;--cta:#145a3c;--cta-ink:#fff;
+  height:100%;border-radius:31px;overflow:hidden;position:relative;display:flex;flex-direction:column;
+  background:radial-gradient(120% 80% at 50% 0%,var(--felt) 0%,var(--felt2) 100%);color:var(--txt);font-family:"Bricolage Grotesque",var(--f-ui);transition:background .5s}
+.app.made{--felt:#16704a;--felt2:#0a3a25;--mute:#b4d6c3}
+.app.light{--felt:#f1f5f2;--felt2:#e1eae4;--txt:#13261b;--mute:#5b7064;--line:rgba(19,60,38,.2);--tint:rgba(19,60,38,.05);--tint2:rgba(19,60,38,.1);
+  --sunk:rgba(19,60,38,.1);--gold:#e0ad3c;--sheet:#ffffff;--sheet-line:#e6ebe7;--pos:#127a4a;--neg:#b4232f;--cta:#145a3c}
+.app.light.made{--felt:#e2f3e8;--felt2:#c9e6d3;--mute:#3f6a52}
+.app .body{flex:1;overflow-y:auto;padding:20px 18px 18px;display:flex;flex-direction:column;gap:18px}
+.app h3{margin:0;font-size:1.3rem;font-weight:800;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.app h3 small{font-size:.85rem;color:var(--mute);font-weight:500}
+.app .back{border:0;background:var(--tint);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none}
+.app .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);margin-bottom:8px;font-weight:700;display:flex;align-items:center;gap:6px}
+.app .lbl .i{font-size:1rem}
+.app .av{position:relative;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--tint2);border:2px solid var(--line);flex:none}
+.app .av.sm{width:30px;height:30px;font-size:.8rem;border-width:1.5px}
+.app .badge{position:absolute;right:-6px;top:-6px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:var(--gold);color:var(--on-gold);box-shadow:0 0 0 2px var(--felt2)}
+.app .badge.crown{background:var(--sheet);color:var(--sheet-ink)}
+.app .cta{border:0;border-radius:14px;background:var(--gold);color:var(--on-gold);padding:15px;font-weight:800;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.app .cta:disabled{opacity:.45;cursor:not-allowed}
+.app .p{color:var(--pos)} .app .n{color:var(--neg)}
+
+/* Accueil */
+.app .brand{display:flex;align-items:center;gap:10px;font-size:1.6rem;font-weight:800;letter-spacing:-.01em}
+.app .brand .i{color:var(--gold);font-size:1.4rem}
+.app .live{border-radius:18px;background:var(--tint);border:1.5px solid var(--gold);padding:14px;display:flex;flex-direction:column;gap:12px;text-align:left;width:100%}
+.app .live .h{display:flex;justify-content:space-between;align-items:baseline;font-weight:800}
+.app .live .h small{color:var(--mute);font-weight:600;font-size:.78rem}
+.app .rank{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;font-size:.7rem;font-weight:600}
+.app .rank .av{margin:0 auto 3px}
+.app .rank b{display:block;font-family:var(--f-mono);font-size:.82rem}
+.app .crumbs{display:flex;justify-content:space-between;align-items:center;font-size:.8rem;color:var(--mute);font-weight:600}
+.app .list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.app .item{display:flex;align-items:center;gap:12px;padding:12px 2px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;width:100%}
+.app .item .t{flex:1;min-width:0}
+.app .item .t b{display:block;font-size:.95rem}
+.app .item .t small{color:var(--mute);font-size:.78rem}
+.app .item .win{font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:4px;color:var(--mute);white-space:nowrap}
+.app .item .win .i{color:var(--gold)}
+
+/* Nouvelle partie */
+.app .field{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:12px;padding:0 12px;background:var(--sunk)}
+.app .field input{flex:1;min-width:0;border:0;background:transparent;padding:12px 0;font-size:1rem;outline:none}
+.app .field:focus-within{border-color:var(--gold)}
+.app .field .i{color:var(--mute)}
+.app .picked{display:flex;gap:8px;min-height:62px;align-items:flex-start;flex-wrap:wrap}
+.app .picked button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.7rem;font-weight:600;width:52px}
+.app .picked .empty{font-size:.8rem;color:var(--mute);align-self:center}
+.app .count{font-family:var(--f-mono);font-size:.78rem;color:var(--mute)}
+.app .count.ok{color:var(--gold)}
+.app .roster{display:flex;flex-direction:column}
+.app .pl{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line)}
+.app .pl .pick{flex:1;display:flex;align-items:center;gap:10px;border:0;background:transparent;text-align:left;padding:0;min-width:0;font-weight:700}
+.app .pl .chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;flex:none;font-size:14px}
+.app .pl.on .chk{background:var(--gold);border-color:var(--gold);color:var(--on-gold)}
+.app .pl .more{border:0;background:transparent;width:32px;height:32px;border-radius:50%;color:var(--mute);font-size:1.1rem}
+.app .pl .acts{display:flex;gap:6px}
+.app .mini{border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:5px 10px;font-size:.75rem;font-weight:700}
+.app .mini.danger{border-color:var(--neg);color:var(--neg)}
+.app .add{display:flex;align-items:center;gap:10px;border:1.5px dashed var(--gold);background:transparent;border-radius:12px;padding:10px 12px;font-weight:700;text-align:left;width:100%}
+.app .add .i{color:var(--gold)}
+.app .pl input{flex:1;min-width:0;border:1.5px solid var(--gold);background:var(--sunk);border-radius:8px;padding:6px 8px;font-weight:700;outline:none}
+
+/* Saisie d'une donne (synthèse S) */
+.app .seats{display:flex;justify-content:space-between;padding:8px 6px 2px}
+.app .seats button{border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.75rem;font-weight:600;color:var(--mute)}
+.app .seats button.on{color:var(--txt)} .app .seats button.on .av{border-color:var(--gold)}
+.app .stairs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;align-items:end;height:118px}
+.app .stair{border:0;border-radius:10px 10px 4px 4px;background:var(--tint2);display:flex;flex-direction:column;justify-content:space-between;padding:7px 6px;text-align:left;font-weight:800;font-size:.78rem;line-height:1.1}
+.app .stair em{font-style:normal;font-family:var(--f-mono);font-size:1rem;color:var(--gold)}
+.app.light .stair em{color:#9a6b05}
+.app .stair.below{background:rgba(228,184,78,.3)}
+.app .stair.on{background:var(--gold);color:var(--on-gold)} .app .stair.on em{color:var(--on-gold)}
+.app .tokens{display:flex;gap:10px}
+.app .tok{width:62px;height:62px;border-radius:50%;border:2px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;line-height:1.05;font-size:1.15rem}
+.app .tok small{font-size:.6rem;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+.app .tok.on{border:2px solid var(--gold);background:var(--gold);color:var(--on-gold)} .app .tok.on small{color:var(--on-gold)}
+.app .gauge{position:relative;height:46px;border-radius:12px;background:var(--sunk);overflow:hidden}
+.app .gauge .fill{position:absolute;inset:0 auto 0 0;background:var(--tint2);transition:width .15s}
+.app.made .gauge .fill{background:linear-gradient(90deg,#c99a2e,var(--gold))}
+.app .gauge .mark{position:absolute;top:0;bottom:0;width:3px;margin-left:-1.5px;background:var(--txt)}
+.app .gauge .mark span{position:absolute;top:4px;left:7px;font-size:.66rem;font-weight:800;white-space:nowrap}
+.app .gauge .num{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-family:var(--f-mono);font-weight:700;font-size:1.5rem}
+.app .gauge .num small{font-size:.7rem;opacity:.75}
+.app .gsub{display:flex;justify-content:space-between;font-size:.78rem;color:var(--mute);margin-top:6px}
+.app .ctl{display:flex;align-items:center;gap:10px;margin-top:10px}
+.app .pm{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:transparent;font-size:1.3rem;font-weight:700;flex:none}
+.app input[type=range]{width:100%;accent-color:var(--gold)}
+.app .seg{display:flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
+.app .seg button{flex:1;border:0;background:transparent;padding:8px 6px;font-weight:700;font-size:.8rem;display:flex;align-items:center;justify-content:center;gap:5px}
+.app .seg button+button{border-left:1.5px solid var(--line)}
+.app .seg button.on{background:var(--gold);color:var(--on-gold)}
+.app .tg{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:7px 12px;font-weight:700;font-size:.8rem}
+.app .tg.on{background:var(--gold);border-color:var(--gold);color:var(--on-gold)}
+.app .hands{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.app .hand{display:flex;flex-direction:column;align-items:center;gap:4px;border:1.5px solid var(--line);background:transparent;border-radius:12px;padding:8px 4px;font-size:.72rem;font-weight:700}
+.app .hand b{font-size:.85rem}
+.app .hand.on{border-color:var(--gold);background:rgba(228,184,78,.2)}
+.app .fan{display:flex;align-items:flex-end;height:26px;padding-left:4px}
+.app .fan i{width:7px;height:20px;margin-left:-3px;border-radius:2px;background:var(--sheet);border:1px solid rgba(0,0,0,.35);transform-origin:bottom center}
+.app .ann{display:flex;flex-direction:column;gap:12px}
+.app .ann-row{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start}
+.app .ann-row > .i{font-size:1.35rem;color:var(--gold);margin-top:6px;width:30px}
+.app.light .ann-row > .i{color:#9a6b05}
+.app .ann-row h4{margin:0 0 6px;font-size:.85rem;display:flex;justify-content:space-between}
+.app .ann-row h4 small{color:var(--mute);font-weight:600}
+.app footer{background:var(--sheet);color:var(--sheet-ink);padding:14px 18px 20px;border-radius:22px 22px 0 0;display:flex;flex-direction:column;gap:10px;box-shadow:0 -4px 20px rgba(0,0,0,.12)}
+.app .verdict{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:1rem;gap:8px}
+.app .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:.8rem;background:var(--sheet-line)}
+.app.made .pill{background:var(--gold);color:var(--on-gold)}
+.app .deltas{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;font-size:.7rem;font-weight:600}
+.app .deltas b{display:block;font-family:var(--f-mono);font-size:.85rem}
+.app footer .p{color:var(--spos)} .app footer .n{color:var(--sneg)}
+.app .save{border:0;border-radius:14px;background:var(--cta);color:var(--cta-ink);padding:14px;font-weight:800;font-size:1rem}
+
+/* Tableau des scores */
+.app .board{background:var(--sheet);color:var(--sheet-ink);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;min-height:0;flex:1}
+.app .board .scroll{overflow:auto;flex:1}
+.app table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.app th,.app td{padding:8px 4px;text-align:right;font-size:.78rem}
+.app th:first-child,.app td:first-child{text-align:left;padding-left:12px}
+.app th:last-child,.app td:last-child{padding-right:12px}
+.app thead th{position:sticky;top:0;background:var(--sheet);font-weight:800;z-index:1}
+.app thead .names th{font-size:.72rem;color:var(--sheet-mute);font-weight:700;padding-bottom:2px}
+.app thead .tot th{font-family:var(--f-mono);font-size:.95rem;border-bottom:2px solid var(--sheet-ink);padding-top:0}
+.app thead .tot th.lead{color:#9a6b05}
+.app td{font-family:var(--f-mono);border-bottom:1px solid var(--sheet-line)}
+.app td:first-child{font-family:"Bricolage Grotesque",var(--f-ui);font-size:.72rem;color:var(--sheet-mute);white-space:nowrap}
+.app td:first-child b{color:var(--sheet-ink)}
+.app td .i{font-size:.8rem}
+.app td.tk{background:rgba(228,184,78,.18);font-weight:700}
+.app td.p{color:var(--spos)} .app td.n{color:var(--sneg)}
+.app .board .emptyb{padding:30px 18px;text-align:center;color:var(--sheet-mute);font-size:.9rem;line-height:1.5}
+.app .podium{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;color:var(--mute);font-weight:600}
+.app .podium b{color:var(--txt)}
+.app .podium .i{color:var(--gold)}
+</style>
+
+<header class="top">
+  <h1>Les 4 écrans dans la direction retenue</h1>
+  <p>Itération 3 du prototype jetable (issue #1) : accueil, nouvelle partie, saisie d'une donne (synthèse S) et tableau des scores, en sombre et en clair. Le parcours se joue en vrai dans le téléphone : enregistrer une donne l'ajoute au tableau. Les parties et les joueurs sont des exemples, tout reste en mémoire et se réinitialise au rechargement.</p>
+</header>
+<main class="stage">
+  <div class="phone"><div class="app" id="app"></div></div>
+  <aside class="notes" id="notes"></aside>
+</main>
+<nav class="switcher" aria-label="Écran affiché">
+  <button id="prev" aria-label="Écran précédent">‹</button>
+  <span id="vlabel"></span>
+  <button id="next" aria-label="Écran suivant">›</button>
+  <i class="sep"></i>
+  <button id="theme" aria-label="Basculer clair ou sombre"></button>
+</nav>
+
+<script>
+/* ---------- barème FFT ---------- */
+const C=[{l:'Prise',s:'P',m:1},{l:'Garde',s:'G',m:2},{l:'Garde sans',s:'GS',m:4},{l:'Garde contre',s:'GC',m:6}];
+const BOUTS=[{l:'Petit',g:'1'},{l:'21',g:'21'},{l:'Excuse',g:'★'}];
+const SEUIL=[56,51,41,36];
+const POIG=[{l:'Aucune',v:0},{l:'Simple',v:20},{l:'Double',v:30},{l:'Triple',v:40}];
+const ATOUTS_BY_N={3:[13,15,18],4:[10,13,15],5:[8,10,13]};
+function compute(d,n){
+  const nb=d.bouts.filter(Boolean).length, seuil=SEUIL[nb], won=d.points>=seuil, ecart=Math.abs(d.points-seuil), m=C[d.contract].m;
+  let v=(25+ecart)*m*(won?1:-1);
+  if(d.petit==='att') v+=10*m; if(d.petit==='def') v-=10*m;
+  const pg=POIG[d.poignee].v; v+=won?pg:-pg;
+  const ch=d.chAnn?(d.chOk?400:-200):(d.chOk?200:0); v+=ch;
+  const self=d.partner===d.taker, solo=n<5||self;
+  const deltas=Array.from({length:n},(_,i)=>i===d.taker?v*(solo?n-1:2):(!solo&&i===d.partner)?v:-v);
+  return {nb,seuil,won,ecart,m,v,deltas,ch};
+}
+
+/* ---------- données d'exemple ---------- */
+let nextId=13;
+let roster=['Alice','Bruno','Chloé','David','Emma','Fanny','Gaspard','Hugo','Inès','Julien','Léa','Marc'].map((name,i)=>({id:i+1,name}));
+const D=(taker,partner,contract,bouts,points,extra={})=>({taker,partner,contract,bouts,points,petit:null,poignee:0,chAnn:false,chOk:false,...extra});
+let partie={name:'Partie du jeudi',date:'jeu. 26 nov.',players:[1,2,3,4,5],donnes:[
+  D(0,3,1,[true,true,false],52),
+  D(1,1,0,[false,true,false],48),
+  D(2,4,1,[true,false,true],44,{poignee:1}),
+  D(3,0,2,[false,true,true],43,{petit:'att'}),
+  D(4,1,0,[true,false,false],50),
+  D(1,2,1,[true,true,true],40),
+]};
+const past=[{name:'Dimanche chez Léa',date:'dim. 23 nov.',n:4,donnes:14,winner:'Léa'},{name:'Vacances à Annecy',date:'sam. 2 août',n:3,donnes:22,winner:'Hugo'}];
+const blank=()=>({taker:1,partner:2,contract:1,bouts:[true,true,false],points:47,petit:'att',poignee:0,chAnn:false,chOk:false});
+let s=blank();
+const today=()=>new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+const freshNp=()=>({name:`Partie du ${today()}`,sel:[],q:'',menu:null,renaming:null,confirm:null});
+let np=freshNp();
+let theme='dark';
+
+/* ---------- helpers ---------- */
+const sg=n=>(n>0?'+':n<0?'−':'')+Math.abs(n);
+const pn=n=>n>0?'p':n<0?'n':'';
+const on=b=>b?' on':'';
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nameOf=id=>(roster.find(p=>p.id===id)||{name:'?'}).name;
+const P=()=>partie.players.map(nameOf);
+const totals=()=>{const n=partie.players.length,t=Array(n).fill(0);partie.donnes.forEach(d=>compute(d,n).deltas.forEach((x,i)=>t[i]+=x));return t;};
+const svg=p=>`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const I={
+  sword:svg('<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/>'),
+  crown:svg('<path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/>'),
+  shield:svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>'),
+  hand:svg('<path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>'),
+  star:svg('<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'),
+  flag:svg('<path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528"/>'),
+  check:svg('<path d="M20 6 9 17l-5-5"/>'),
+  x:svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
+  back:svg('<path d="m15 18-6-6 6-6"/>'),
+  plus:svg('<path d="M5 12h14"/><path d="M12 5v14"/>'),
+  search:svg('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>'),
+  trophy:svg('<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>'),
+  sun:svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>'),
+  moon:svg('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>'),
+};
+const avatar=(i,names,d,cls='')=>`<span class="av${cls}">${esc(names[i][0])}${d&&i===d.taker?`<span class="badge">${I.sword}</span>`:''}${d&&i===d.partner&&names.length===5?`<span class="badge crown" style="${i===d.taker?'right:auto;left:-6px':''}">${I.crown}</span>`:''}</span>`;
+const fan=n=>`<span class="fan">${Array.from({length:n},(_,k)=>`<i style="transform:rotate(${(k-(n-1)/2)*(40/n)}deg)"></i>`).join('')}</span>`;
+
+/* ---------- écran 1 : accueil ---------- */
+function screenHome(){
+  const names=P(), t=totals(), lead=t.indexOf(Math.max(...t));
+  return {cls:'',html:`<div class="body">
+    <div class="brand">${I.crown} ScoreTarot</div>
+    <button class="cta" data-a="go" data-v="1">${I.plus} Nouvelle partie</button>
+    <div><div class="lbl">En cours</div>
+      <button class="live" data-a="go" data-v="3">
+        <span class="h">${esc(partie.name)} <small>${partie.date} · ${partie.donnes.length} donne${partie.donnes.length>1?'s':''}</small></span>
+        <span class="rank">${names.map((p,i)=>`<span>${avatar(i,names,null,' sm')}${esc(p)}<b class="${pn(t[i])}">${sg(t[i])}</b></span>`).join('')}</span>
+        <span class="crumbs"><span>${partie.donnes.length?`${I.trophy} ${esc(names[lead])} mène`:'Pas encore de donne'}</span><span>Reprendre ›</span></span>
+      </button></div>
+    <div><div class="lbl">Terminées</div><div class="list">${past.map(g=>`<div class="item"><span class="t"><b>${esc(g.name)}</b><small>${g.date} · ${g.n} joueurs · ${g.donnes} donnes</small></span><span class="win">${I.trophy} ${esc(g.winner)}</span></div>`).join('')}</div></div>
+  </div>`};
+}
+
+/* ---------- écran 2 : nouvelle partie ---------- */
+function screenNew(){
+  const q=np.q.trim(), ql=q.toLocaleLowerCase('fr');
+  const sorted=[...roster].sort((a,b)=>a.name.localeCompare(b.name,'fr',{sensitivity:'base'}));
+  const shown=q?sorted.filter(p=>p.name.toLocaleLowerCase('fr').includes(ql)):sorted;
+  const exact=sorted.some(p=>p.name.toLocaleLowerCase('fr')===ql);
+  const n=np.sel.length, ok=n>=3&&n<=5;
+  const names=np.sel.map(nameOf);
+  const row=p=>{
+    const sel=np.sel.includes(p.id);
+    if(np.renaming===p.id) return `<div class="pl on"><input id="ren" value="${esc(np.renameVal)}" aria-label="Nouveau nom"><span class="acts"><button class="mini" data-a="renOk" data-v="${p.id}">OK</button><button class="mini" data-a="menuX">Annuler</button></span></div>`;
+    if(np.confirm===p.id) return `<div class="pl"><span class="pick">Supprimer ${esc(p.name)} ?</span><span class="acts"><button class="mini danger" data-a="delOk" data-v="${p.id}">Supprimer</button><button class="mini" data-a="menuX">Garder</button></span></div>`;
+    return `<div class="pl${on(sel)}"><button class="pick" data-a="pick" data-v="${p.id}" aria-pressed="${sel}"><span class="chk">${sel?I.check:''}</span>${esc(p.name)}</button>
+      ${np.menu===p.id?`<span class="acts"><button class="mini" data-a="ren" data-v="${p.id}">Renommer</button><button class="mini danger" data-a="del" data-v="${p.id}">Supprimer</button></span>`:`<button class="more" data-a="menu" data-v="${p.id}" aria-label="Options pour ${esc(p.name)}">⋯</button>`}</div>`;
+  };
+  return {cls:'',html:`<div class="body">
+    <h3><button class="back" data-a="go" data-v="0" aria-label="Retour">${I.back}</button><span style="flex:1">Nouvelle partie</span></h3>
+    <div><div class="lbl">Description</div><div class="field"><input id="pname" value="${esc(np.name)}" aria-label="Description de la partie"></div></div>
+    <div><div class="lbl">Joueurs</div>
+      <div class="field">${I.search}<input id="q" value="${esc(np.q)}" aria-label="Chercher ou ajouter un joueur" autocomplete="off"></div>
+      ${q&&!exact?`<div style="margin-top:8px"><button class="add" data-a="addP">${I.plus} Ajouter « ${esc(q)} »</button></div>`:''}
+      <div class="roster">${shown.map(row).join('')||''}</div></div>
+  </div>
+  <footer><button class="cta" data-a="start" ${ok?'':'disabled'}>Commencer${n?` à ${n}`:''}</button></footer>`};
+}
+
+/* ---------- écran 3 : saisie d'une donne (synthèse S) ---------- */
+function screenDonne(){
+  const names=P(), n=names.length, r=compute(s,n), pct=s.points/91*100, mk=r.seuil/91*100, AT=ATOUTS_BY_N[n];
+  return {cls:r.won?'made':'',html:`<div class="body">
+    <h3><button class="back" data-a="go" data-v="3" aria-label="Retour au tableau">${I.back}</button><span style="flex:1">Donne ${partie.donnes.length+1}</span><small>${esc(partie.name)}</small></h3>
+    <div><div class="lbl">Camp de l'attaque</div>
+      <div class="seats">${names.map((p,i)=>`<button class="${on(i===s.taker||(n===5&&i===s.partner))}" data-a="seat" data-v="${i}" aria-label="${esc(p)}">${avatar(i,names,s)}${esc(p)}</button>`).join('')}</div></div>
+    <div><div class="lbl">Enchère</div><div class="stairs">${C.map((c,i)=>`<button class="stair${i===s.contract?' on':i<s.contract?' below':''}" style="height:${34+i*26}%" data-a="contract" data-v="${i}" aria-pressed="${i===s.contract}"><em>×${c.m}</em>${c.l}</button>`).join('')}</div></div>
+    <div><div class="lbl">Bouts de l'attaque</div><div class="tokens">${BOUTS.map((b,i)=>`<button class="tok${on(s.bouts[i])}" data-a="bout" data-v="${i}" aria-pressed="${s.bouts[i]}">${b.g}<small>${b.l}</small></button>`).join('')}</div></div>
+    <div><div class="lbl">${I.sword} Points de l'attaque</div>
+      <div class="gauge" data-k="gauge"><div class="fill" style="width:${pct}%"></div><div class="mark" style="left:${mk}%"><span>${r.seuil}</span></div><div class="num">${s.points}<small> / 91</small></div></div>
+      <div class="gsub" data-k="gsub"><span>${r.won?`Faite de ${r.ecart}`:`Il manque ${r.ecart}`}</span><span>${I.shield} défense ${91-s.points}</span></div>
+      <div class="ctl"><button class="pm" data-a="pd" data-v="-1" aria-label="Moins un point">−</button><input type="range" id="pts" min="0" max="91" value="${s.points}" data-a="range" aria-label="Points de l'attaque"><button class="pm" data-a="pd" data-v="1" aria-label="Plus un point">+</button></div></div>
+    <div class="ann"><div class="lbl">Annonces</div>
+      <div class="ann-row">${I.flag}<div><h4>Petit au bout <small data-k="pab">${s.petit?sg((s.petit==='att'?10:-10)*r.m)+' par défenseur':''}</small></h4>
+        <div class="seg"><button class="${s.petit===null?'on':''}" data-a="petit" data-v="">Aucun</button><button class="${s.petit==='att'?'on':''}" data-a="petit" data-v="att">${I.sword} Attaque</button><button class="${s.petit==='def'?'on':''}" data-a="petit" data-v="def">${I.shield} Défense</button></div></div></div>
+      <div class="ann-row">${I.hand}<div><h4>Poignée <small>au camp gagnant</small></h4><div class="hands">${[1,2,3].map(k=>`<button class="hand${on(s.poignee===k)}" data-a="poign" data-v="${k}" aria-pressed="${s.poignee===k}">${fan(AT[k-1])}<b>${POIG[k].l}</b>${AT[k-1]} atouts · ${POIG[k].v}</button>`).join('')}</div></div></div>
+      <div class="ann-row">${I.star}<div><h4>Chelem <small>${r.ch?sg(r.ch):''}</small></h4><div style="display:flex;gap:6px"><button class="tg${on(s.chAnn)}" data-a="chAnn" aria-pressed="${s.chAnn}">${I.flag} Annoncé</button><button class="tg${on(s.chOk)}" data-a="chOk" aria-pressed="${s.chOk}">${I.check} Réussi</button></div></div></div>
+    </div></div>
+  <footer data-k="foot"><div class="verdict"><span>${C[s.contract].l} ${(r.won?'faite':'chutée')} de ${r.ecart}</span><span class="pill">${r.won?I.check:I.x} ${sg(r.v)} / défenseur</span></div>
+    <div class="deltas" style="grid-template-columns:repeat(${n},1fr)">${names.map((p,i)=>`<div>${esc(p)}<b class="${pn(r.deltas[i])}">${sg(r.deltas[i])}</b></div>`).join('')}</div>
+    <button class="save" data-a="save">Enregistrer la donne</button></footer>`};
+}
+
+/* ---------- écran 4 : tableau des scores ---------- */
+function screenBoard(){
+  const names=P(), n=names.length, t=totals(), max=Math.max(...t), lead=t.indexOf(max);
+  const rows=partie.donnes.map((d,k)=>{const r=compute(d,n);return `<tr><td><b>${k+1}</b> ${I.sword}${esc(names[d.taker][0])} ${C[d.contract].s} ${r.won?I.check:I.x}</td>${r.deltas.map((x,i)=>`<td class="${pn(x)}${i===d.taker?' tk':''}">${sg(x)}</td>`).join('')}</tr>`;}).reverse().join('');
+  return {cls:'',html:`<div class="body" style="gap:14px">
+    <h3><button class="back" data-a="go" data-v="0" aria-label="Retour à l'accueil">${I.back}</button><span style="flex:1">${esc(partie.name)}</span><small>${partie.date}</small></h3>
+    <div class="podium"><span>${partie.donnes.length?`${I.trophy} <b>${esc(names[lead])}</b> mène avec ${sg(max)}`:'Aucune donne pour l\'instant'}</span><span>${partie.donnes.length} donne${partie.donnes.length>1?'s':''}</span></div>
+    <div class="board"><div class="scroll">${partie.donnes.length?`<table>
+      <thead><tr class="names"><th></th>${names.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>
+        <tr class="tot"><th>Total</th>${t.map((x,i)=>`<th class="${i===lead?'lead':''}">${sg(x)}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody></table>`:`<div class="emptyb">Les donnes s'afficheront ici, la plus récente en haut.<br>Touche « Nouvelle donne » pour saisir la première.</div>`}</div></div>
+    <button class="cta" data-a="newDonne">${I.plus} Nouvelle donne</button>
+  </div>`};
+}
+
+/* ---------- navigation, rendu ---------- */
+const SCREENS=[
+  {k:'accueil',n:'Accueil',f:screenHome,notes:['La partie en cours est en haut, avec le classement provisoire : on la reprend en un toucher.','Les parties terminées affichent leur gagnant.','Données d\'exemple, tout est en mémoire (stockage local dans la vraie app, Q5).']},
+  {k:'nouvelle-partie',n:'Nouvelle partie',f:screenNew,notes:['Description préremplie avec la date du jour, modifiable.','Les joueurs choisis sont simplement cochés dans la liste.','Pas de texte d\'aide : la liste et les boutons suffisent.','Joueurs enregistrés triés par ordre alphabétique (Q15).','Le champ filtre la liste et propose « Ajouter » si le nom n\'existe pas (Q15bis) ; un joueur ajouté est enregistré pour les parties suivantes (Q13).','« ⋯ » ouvre Renommer et Supprimer (Q14). Un joueur supprimé reste dans les parties passées.','3 à 5 joueurs (Q2) : « Commencer » reste grisé en dehors.']},
+  {k:'donne',n:'Saisie d\'une donne',f:screenDonne,notes:['Synthèse S : B1 avec le choix des joueurs de B0.','Une tape : roi appelé 👑 ; deux tapes : preneur ⚔ ; une tape sur le preneur : il joue seul. À 3 ou 4 joueurs, pas de roi appelé.','« Enregistrer la donne » l\'ajoute au tableau des scores.']},
+  {k:'scores',n:'Tableau des scores',f:screenBoard,notes:['Totaux figés en haut, donnes de la plus récente à la plus ancienne.','Chaque ligne rappelle le preneur ⚔, le contrat et ✓ faite / ✗ chutée ; la colonne du preneur est surlignée.','Tous les scores sont recalculés depuis les donnes avec le barème FFT.']},
+];
+let cur=Math.max(0,SCREENS.findIndex(x=>'#'+x.k===location.hash));
+
+function render(){
+  const act=document.activeElement, aid=act&&act.id, sel=aid&&act.setSelectionRange?[act.selectionStart,act.selectionEnd]:null;
+  const sc=SCREENS[cur], out=sc.f(), app=document.getElementById('app');
+  app.className='app'+(theme==='light'?' light':'')+(out.cls?' '+out.cls:'');
+  app.innerHTML=out.html;
+  document.getElementById('vlabel').textContent=`${cur+1}/4 · ${sc.n}`;
+  document.getElementById('theme').innerHTML=theme==='light'?I.moon:I.sun;
+  document.getElementById('notes').innerHTML=`<h2>${sc.n}</h2><ul>${sc.notes.map(x=>`<li>${x}</li>`).join('')}</ul><span class="tag">Thème ${theme==='light'?'clair':'sombre'} · bouton ${theme==='light'?'lune':'soleil'} dans la barre</span>`;
+  if(aid){const el=document.getElementById(aid); if(el&&el!==document.body){el.focus(); if(sel&&el.setSelectionRange) el.setSelectionRange(sel[0],sel[1]);}}
+}
+function live(){ /* pendant le glissement du curseur de points : on ne remplace que les zones data-k */
+  const out=SCREENS[cur].f(), tmp=document.createElement('div'), app=document.getElementById('app'); tmp.innerHTML=out.html;
+  app.className='app'+(theme==='light'?' light':'')+(out.cls?' '+out.cls:'');
+  tmp.querySelectorAll('[data-k]').forEach(nw=>{const el=app.querySelector(`[data-k="${nw.dataset.k}"]`); if(el) el.innerHTML=nw.innerHTML;});
+}
+function go(i){cur=(i+SCREENS.length)%SCREENS.length; history.replaceState(null,'','#'+SCREENS[cur].k); document.querySelector('#app')&&render(); const b=document.querySelector('#app .body'); if(b) b.scrollTop=0;}
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('#app [data-a]'); if(!b||b.dataset.a==='range') return;
+  const a=b.dataset.a, v=b.dataset.v, k=Number(v), n=partie.players.length;
+  if(a==='go') return go(k);
+  /* nouvelle partie */
+  if(a==='pick'){ np.sel=np.sel.includes(k)?np.sel.filter(x=>x!==k):(np.sel.length<5?[...np.sel,k]:np.sel); np.menu=null; }
+  if(a==='addP'){ const name=np.q.trim(); const p={id:nextId++,name}; roster.push(p); if(np.sel.length<5) np.sel.push(p.id); np.q=''; }
+  if(a==='menu'){ np.menu=k; np.confirm=null; np.renaming=null; }
+  if(a==='menuX'){ np.menu=null; np.confirm=null; np.renaming=null; }
+  if(a==='ren'){ np.renaming=k; np.renameVal=nameOf(k); np.menu=null; setTimeout(()=>{const el=document.getElementById('ren'); if(el){el.focus(); el.select();}}); }
+  if(a==='renOk'){ const val=(document.getElementById('ren')||{}).value; if(val&&val.trim()) roster.find(p=>p.id===k).name=val.trim(); np.renaming=null; }
+  if(a==='del'){ np.confirm=k; np.menu=null; }
+  if(a==='delOk'){ roster=roster.filter(p=>p.id!==k); np.sel=np.sel.filter(x=>x!==k); np.confirm=null; }
+  if(a==='start'){ partie={name:np.name.trim()||freshNp().name,date:new Date().toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}),players:[...np.sel],donnes:[]}; s=blank(); s.taker=0; s.partner=np.sel.length===5?1:0; np=freshNp(); return go(3); }
+  /* donne */
+  if(a==='seat'){ if(n<5){ s.taker=k; s.partner=k; } else if(k===s.taker) s.partner=s.taker; else if(k===s.partner) s.taker=k; else s.partner=k; }
+  if(a==='contract') s.contract=k;
+  if(a==='bout') s.bouts[k]=!s.bouts[k];
+  if(a==='pd') s.points=Math.min(91,Math.max(0,s.points+k));
+  if(a==='petit') s.petit=v||null;
+  if(a==='poign') s.poignee=s.poignee===k?0:k;
+  if(a==='chAnn') s.chAnn=!s.chAnn;
+  if(a==='chOk') s.chOk=!s.chOk;
+  if(a==='save'){ partie.donnes.push({...s,bouts:[...s.bouts]}); const t=s.taker; s=blank(); s.taker=(t+1)%n; s.partner=n===5?(t+2)%n:s.taker; return go(3); }
+  if(a==='newDonne') return go(2);
+  render();
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.a==='range'){ s.points=Number(t.value); live(); return; }
+  if(t.id==='q'){ np.q=t.value; render(); }
+  if(t.id==='pname'){ np.name=t.value; }
+  if(t.id==='ren'){ np.renameVal=t.value; }
+});
+document.addEventListener('change',e=>{ if(e.target.dataset.a==='range') render(); });
+document.addEventListener('keydown',e=>{
+  if(e.target.id==='q'&&e.key==='Enter'){ const q=np.q.trim(); if(q&&!roster.some(p=>p.name.toLocaleLowerCase('fr')===q.toLocaleLowerCase('fr'))){ document.querySelector('[data-a="addP"]').click(); } return; }
+  if(e.target.id==='ren'&&e.key==='Enter'){ document.querySelector('[data-a="renOk"]').click(); return; }
+  if(e.target.closest('input,textarea,[contenteditable]')) return;
+  if(e.key==='ArrowLeft') go(cur-1); if(e.key==='ArrowRight') go(cur+1);
+});
+document.getElementById('prev').onclick=()=>go(cur-1);
+document.getElementById('next').onclick=()=>go(cur+1);
+document.getElementById('theme').onclick=()=>{theme=theme==='light'?'dark':'light'; render();};
+window.addEventListener('hashchange',()=>{const i=SCREENS.findIndex(x=>'#'+x.k===location.hash); if(i>=0&&i!==cur){cur=i;render();}});
+render();
+</script>
