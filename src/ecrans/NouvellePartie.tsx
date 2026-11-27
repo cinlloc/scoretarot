@@ -1,73 +1,127 @@
 import { useState, type FormEvent } from 'react';
-import { memeNom } from '../partie/partie';
+import { memeNom, nomContient, type Joueur } from '../partie/partie';
 import { Avatar, EnTeteEcran, Etiquette } from './commun';
 import { BOUTON_OR } from './format';
 
 const MINIMUM_JOUEURS = 3;
 const MAXIMUM_JOUEURS = 5;
 
-export function NouvellePartie({ onCommencer, onRetour }: {
-  onCommencer: (noms: string[]) => void;
+const CHAMP =
+  'flex items-center gap-2 rounded-xl border-[1.5px] border-trait bg-creux px-3 focus-within:border-or';
+const SAISIE = 'min-w-0 flex-1 bg-transparent py-3 text-base outline-none';
+
+export function NouvellePartie({ joueurs, descriptionParDefaut, onAjouterJoueur, onCommencer, onRetour }: {
+  joueurs: Joueur[];
+  descriptionParDefaut: string;
+  onAjouterJoueur: (nom: string) => Joueur;
+  onCommencer: (description: string, joueurs: Joueur[]) => void;
   onRetour: () => void;
 }) {
-  const [noms, setNoms] = useState<string[]>([]);
-  const [saisie, setSaisie] = useState('');
+  const [description, setDescription] = useState(descriptionParDefaut);
+  const [recherche, setRecherche] = useState('');
+  // identifiants cochés, dans l'ordre de sélection : c'est l'ordre des colonnes de la partie
+  const [choisis, setChoisis] = useState<string[]>([]);
 
-  const nomSaisi = saisie.trim();
-  const dejaPris = noms.some((nom) => memeNom(nom, nomSaisi));
-  const peutAjouter = nomSaisi !== '' && !dejaPris && noms.length < MAXIMUM_JOUEURS;
-  const peutCommencer = noms.length >= MINIMUM_JOUEURS && noms.length <= MAXIMUM_JOUEURS;
+  const nomCherche = recherche.trim();
+  const affiches = joueurs
+    .filter((joueur) => nomContient(joueur.nom, nomCherche))
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+  const peutAjouter = nomCherche !== '' && !joueurs.some((joueur) => memeNom(joueur.nom, nomCherche));
+  const peutCommencer = choisis.length >= MINIMUM_JOUEURS && choisis.length <= MAXIMUM_JOUEURS;
+
+  function basculer(id: string) {
+    if (choisis.includes(id)) {
+      setChoisis(choisis.filter((autre) => autre !== id));
+    } else {
+      setChoisis([...choisis, id]);
+    }
+  }
 
   function ajouter(evenement: FormEvent) {
     evenement.preventDefault();
     if (!peutAjouter) {
       return;
     }
-    setNoms([...noms, nomSaisi]);
-    setSaisie('');
+    const joueur = onAjouterJoueur(nomCherche);
+    setChoisis([...choisis, joueur.id]);
+    setRecherche('');
+  }
+
+  function commencer() {
+    const joueursChoisis = choisis.map((id) => joueurs.find((joueur) => joueur.id === id)!);
+    onCommencer(description.trim() || descriptionParDefaut, joueursChoisis);
   }
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col gap-6 px-4 py-6">
       <EnTeteEcran titre="Nouvelle partie" onRetour={onRetour} libelleRetour="Retour à l'accueil" />
-      <section className="flex-1">
-        <Etiquette>Joueurs, dans l'ordre de la table</Etiquette>
-        <form onSubmit={ajouter} className="flex gap-2">
+      <section>
+        <Etiquette>Description</Etiquette>
+        <div className={CHAMP}>
           <input
-            value={saisie}
-            onChange={(evenement) => setSaisie(evenement.target.value)}
-            aria-label="Nom du joueur"
-            placeholder="Nom du joueur"
+            value={description}
+            onChange={(evenement) => setDescription(evenement.target.value)}
+            aria-label="Description de la partie"
             autoComplete="off"
-            className="min-w-0 flex-1 rounded-xl border-[1.5px] border-trait bg-creux px-3 py-3 text-base outline-none placeholder:text-attenue focus:border-or"
+            className={SAISIE}
           />
-          <button
-            type="submit"
-            disabled={!peutAjouter}
-            className="rounded-xl border-[1.5px] border-dashed border-or px-4 font-bold disabled:opacity-45"
-          >
-            Ajouter
-          </button>
-        </form>
-        <ol className="mt-4 flex flex-col">
-          {noms.map((nom) => (
-            <li key={nom} className="flex items-center gap-3 border-b border-trait py-2">
-              <Avatar nom={nom} petit />
-              <span className="min-w-0 flex-1 truncate font-bold">{nom}</span>
-              <button
-                type="button"
-                onClick={() => setNoms(noms.filter((autre) => autre !== nom))}
-                aria-label={`Retirer ${nom}`}
-                className="grid size-8 place-items-center rounded-full text-attenue"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ol>
+        </div>
       </section>
-      <button type="button" className={BOUTON_OR} disabled={!peutCommencer} onClick={() => onCommencer(noms)}>
-        Commencer{noms.length > 0 ? ` à ${noms.length}` : ''}
+      <section className="flex-1">
+        <Etiquette>Joueurs</Etiquette>
+        <form onSubmit={ajouter} className="flex flex-col gap-2">
+          <div className={CHAMP}>
+            <span aria-hidden="true" className="text-attenue">
+              ⌕
+            </span>
+            <input
+              value={recherche}
+              onChange={(evenement) => setRecherche(evenement.target.value)}
+              aria-label="Chercher ou ajouter un joueur"
+              autoComplete="off"
+              className={SAISIE}
+            />
+          </div>
+          {peutAjouter && (
+            <button
+              type="submit"
+              className="flex items-center gap-2 rounded-xl border-[1.5px] border-dashed border-or px-3 py-2.5 text-left font-bold"
+            >
+              <span aria-hidden="true" className="text-or">
+                +
+              </span>
+              Ajouter « {nomCherche} »
+            </button>
+          )}
+        </form>
+        <ul className="mt-2 flex flex-col">
+          {affiches.map((joueur) => {
+            const rang = choisis.indexOf(joueur.id) + 1;
+            return (
+              <li key={joueur.id}>
+                <label className="flex cursor-pointer items-center gap-3 border-b border-trait py-2">
+                  <input
+                    type="checkbox"
+                    checked={rang > 0}
+                    onChange={() => basculer(joueur.id)}
+                    className="peer sr-only"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="grid size-6 shrink-0 place-items-center rounded-md border-2 border-trait font-mono text-sm font-bold peer-checked:border-or peer-checked:bg-or peer-checked:text-sur-or peer-focus-visible:outline-2 peer-focus-visible:outline-or"
+                  >
+                    {rang > 0 ? rang : ''}
+                  </span>
+                  <Avatar nom={joueur.nom} petit enEvidence={rang > 0} />
+                  <span className="min-w-0 flex-1 truncate font-bold">{joueur.nom}</span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+      <button type="button" className={BOUTON_OR} disabled={!peutCommencer} onClick={commencer}>
+        Commencer{choisis.length > 0 ? ` à ${choisis.length}` : ''}
       </button>
     </main>
   );

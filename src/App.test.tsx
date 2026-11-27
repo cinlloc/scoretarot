@@ -1,16 +1,39 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import App from './App';
 
 type Utilisateur = ReturnType<typeof userEvent.setup>;
 
+function champJoueur() {
+  return screen.getByRole('textbox', { name: 'Chercher ou ajouter un joueur' });
+}
+
+// Entrée valide « Ajouter », qui enregistre le joueur et le coche.
+async function ajouterJoueurs(utilisateur: Utilisateur, noms: string[]) {
+  for (const nom of noms) {
+    await utilisateur.type(champJoueur(), `${nom}{Enter}`);
+  }
+}
+
 async function creerPartie(utilisateur: Utilisateur, noms: string[]) {
   await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle partie' }));
-  for (const nom of noms) {
-    await utilisateur.type(screen.getByRole('textbox', { name: 'Nom du joueur' }), `${nom}{Enter}`);
-  }
+  await ajouterJoueurs(utilisateur, noms);
   await utilisateur.click(screen.getByRole('button', { name: /^Commencer/ }));
+}
+
+function verifierListe(noms: string[]) {
+  const cases = screen.queryAllByRole('checkbox');
+  expect(cases).toHaveLength(noms.length);
+  noms.forEach((nom, index) => expect(cases[index]).toHaveAccessibleName(nom));
+}
+
+// Enregistre des joueurs via une première partie, puis ouvre une nouvelle partie vierge.
+async function enregistrerJoueurs(utilisateur: Utilisateur, noms: string[]) {
+  await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle partie' }));
+  await ajouterJoueurs(utilisateur, noms);
+  await utilisateur.click(screen.getByRole('button', { name: "Retour à l'accueil" }));
+  await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle partie' }));
 }
 
 function siege(nom: string) {
@@ -93,19 +116,146 @@ test('à 5, deux tapes désignent le preneur, une tape le roi appelé, et le tab
   expect(totalDe('David')).toBe('−62');
 });
 
-test("« Commencer » n'est actif qu'à partir de 3 joueurs", async () => {
+test('un joueur ajouté depuis le champ est coché, puis proposé dans la partie suivante', async () => {
   const utilisateur = userEvent.setup();
   render(<App />);
   await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle partie' }));
-  const champ = screen.getByRole('textbox', { name: 'Nom du joueur' });
-  await utilisateur.type(champ, 'Alice{Enter}');
-  await utilisateur.type(champ, 'Bruno{Enter}');
+  await utilisateur.type(champJoueur(), 'Alice');
+  await utilisateur.click(screen.getByRole('button', { name: 'Ajouter « Alice »' }));
 
-  expect(screen.getByRole('button', { name: /^Commencer/ })).toBeDisabled();
+  expect(screen.getByRole('checkbox', { name: 'Alice' })).toBeChecked();
+  expect(champJoueur()).toHaveValue('');
 
-  await utilisateur.type(champ, 'Chloé{Enter}');
+  await utilisateur.click(screen.getByRole('button', { name: "Retour à l'accueil" }));
+  await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle partie' }));
 
+  expect(screen.getByRole('checkbox', { name: 'Alice' })).not.toBeChecked();
+});
+
+test('les joueurs enregistrés sont triés par ordre alphabétique et le filtre réduit la liste pendant la frappe', async () => {
+  const utilisateur = userEvent.setup();
+  render(<App />);
+  await enregistrerJoueurs(utilisateur, ['Martin', 'élodie', 'Bruno', 'Marie']);
+
+  verifierListe(['Bruno', 'élodie', 'Marie', 'Martin']);
+
+  await utilisateur.type(champJoueur(), 'ma');
+
+  verifierListe(['Marie', 'Martin']);
+
+  await utilisateur.type(champJoueur(), 'rt');
+
+  verifierListe(['Martin']);
+});
+
+test("« Ajouter » n'est pas proposé pour un nom existant, même avec une autre casse ou sans accent", async () => {
+  const utilisateur = userEvent.setup();
+  render(<App />);
+  await enregistrerJoueurs(utilisateur, ['Chloé']);
+
+  for (const variante of ['CHLOÉ', 'Chloe', 'chloe']) {
+    await utilisateur.clear(champJoueur());
+    await utilisateur.type(champJoueur(), variante);
+
+    expect(screen.queryByRole('button', { name: /^Ajouter/ })).not.toBeInTheDocument();
+    verifierListe(['Chloé']);
+  }
+
+  await utilisateur.type(champJoueur(), 'e');
+
+  expect(screen.getByRole('button', { name: 'Ajouter « chloee »' })).toBeInTheDocument();
+});
+
+test('« Commencer » est inactif à 2 et à 6 joueurs cochés, actif de 3 à 5', async () => {
+  const utilisateur = userEvent.setup();
+  render(<App />);
+  await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle partie' }));
+  await ajouterJoueurs(utilisateur, ['Alice', 'Bruno']);
+
+  expect(screen.getByRole('button', { name: 'Commencer à 2' })).toBeDisabled();
+
+  await ajouterJoueurs(utilisateur, ['Chloé']);
   expect(screen.getByRole('button', { name: 'Commencer à 3' })).toBeEnabled();
+  await ajouterJoueurs(utilisateur, ['David']);
+  expect(screen.getByRole('button', { name: 'Commencer à 4' })).toBeEnabled();
+  await ajouterJoueurs(utilisateur, ['Emma']);
+  expect(screen.getByRole('button', { name: 'Commencer à 5' })).toBeEnabled();
+  await ajouterJoueurs(utilisateur, ['Fanny']);
+  expect(screen.getByRole('button', { name: 'Commencer à 6' })).toBeDisabled();
+
+  await utilisateur.click(screen.getByRole('checkbox', { name: 'Bruno' }));
+
+  expect(screen.getByRole('button', { name: 'Commencer à 5' })).toBeEnabled();
+});
+
+test("l'ordre dans lequel on coche les joueurs fixe l'ordre des colonnes du tableau", async () => {
+  const utilisateur = userEvent.setup();
+  render(<App />);
+  await enregistrerJoueurs(utilisateur, ['Alice', 'Bruno', 'Chloé']);
+
+  await utilisateur.click(screen.getByRole('checkbox', { name: 'Chloé' }));
+  await utilisateur.click(screen.getByRole('checkbox', { name: 'Alice' }));
+  await utilisateur.click(screen.getByRole('checkbox', { name: 'Bruno' }));
+  await utilisateur.click(screen.getByRole('button', { name: 'Commencer à 3' }));
+  await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle donne' }));
+  await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer la donne' }));
+
+  const enTetes = within(screen.getByRole('table')).getAllByRole('columnheader').slice(1);
+  expect(enTetes.map((enTete) => enTete.textContent)).toEqual(['Chloé', 'Alice', 'Bruno']);
+});
+
+describe('description de la partie', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 26, 20, 30));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('par défaut, elle contient la date du jour', async () => {
+    const utilisateur = userEvent.setup();
+    render(<App />);
+    await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle partie' }));
+
+    expect(screen.getByRole('textbox', { name: 'Description de la partie' })).toHaveValue('Partie du jeudi 26 novembre');
+  });
+
+  test('elle est modifiable, et reprend la valeur datée si on la vide', async () => {
+    const utilisateur = userEvent.setup();
+    render(<App />);
+    await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle partie' }));
+    const description = screen.getByRole('textbox', { name: 'Description de la partie' });
+    await utilisateur.clear(description);
+    await utilisateur.type(description, 'Revanche chez Bruno');
+    await ajouterJoueurs(utilisateur, ['Alice', 'Bruno', 'Chloé']);
+    await utilisateur.click(screen.getByRole('button', { name: 'Commencer à 3' }));
+
+    expect(screen.getByRole('heading', { name: 'Revanche chez Bruno' })).toBeInTheDocument();
+
+    await utilisateur.click(screen.getByRole('button', { name: "Retour à l'accueil" }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle partie' }));
+    await utilisateur.clear(screen.getByRole('textbox', { name: 'Description de la partie' }));
+    await utilisateur.click(screen.getByRole('checkbox', { name: 'Alice' }));
+    await utilisateur.click(screen.getByRole('checkbox', { name: 'Bruno' }));
+    await utilisateur.click(screen.getByRole('checkbox', { name: 'Chloé' }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Commencer à 3' }));
+
+    expect(screen.getByRole('heading', { name: 'Partie du jeudi 26 novembre' })).toBeInTheDocument();
+  });
+});
+
+test("les joueurs enregistrés sont toujours là après un nouveau rendu de l'app", async () => {
+  const utilisateur = userEvent.setup();
+  const { unmount } = render(<App />);
+  await enregistrerJoueurs(utilisateur, ['Bruno', 'Alice']);
+  unmount();
+
+  render(<App />);
+  await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle partie' }));
+
+  verifierListe(['Alice', 'Bruno']);
 });
 
 test("la saisie dit combien il manque, puis de combien la donne est faite quand l'attaque atteint le seuil", async () => {
