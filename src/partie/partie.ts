@@ -21,17 +21,27 @@ export const ENCHERES: { enchere: Donne['enchere']; libelle: string; abrege: str
   { enchere: 'garde-contre', libelle: 'Garde contre', abrege: 'GC', multiplicateur: 6 },
 ];
 
+function simplifier(texte: string) {
+  return texte.trim().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase('fr');
+}
+
 export function memeNom(nom: string, autre: string): boolean {
-  const simplifier = (texte: string) =>
-    texte.trim().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase('fr');
   return simplifier(nom) === simplifier(autre);
 }
 
-export function creerPartie(joueurs: Joueur[], maintenant: Date): Partie {
+export function nomContient(nom: string, recherche: string): boolean {
+  return simplifier(nom).includes(simplifier(recherche));
+}
+
+export function descriptionDuJour(maintenant: Date): string {
   const jour = maintenant.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  return `Partie du ${jour}`;
+}
+
+export function creerPartie(joueurs: Joueur[], description: string, maintenant: Date): Partie {
   return {
     id: crypto.randomUUID(),
-    description: `Partie du ${jour}`,
+    description,
     date: maintenant.toISOString(),
     joueurs: joueurs.map((joueur) => joueur.id),
     donnes: [],

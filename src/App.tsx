@@ -4,7 +4,7 @@ import { NouvellePartie } from './ecrans/NouvellePartie';
 import { SaisieDonne } from './ecrans/SaisieDonne';
 import { TableauScores } from './ecrans/TableauScores';
 import type { Donne } from './moteur/calculerDonne';
-import { creerPartie, donneParDefaut, memeNom, type Joueur, type Partie } from './partie/partie';
+import { creerPartie, descriptionDuJour, donneParDefaut, type Joueur, type Partie } from './partie/partie';
 import { charger, enregistrer, type Sauvegarde } from './stockage/stockage';
 
 type Ecran =
@@ -26,18 +26,15 @@ export default function App() {
     return partie.joueurs.map((id) => sauvegarde.joueurs.find((joueur) => joueur.id === id)?.nom ?? '?');
   }
 
-  function commencer(noms: string[]) {
-    // Un nom déjà connu reprend le même joueur, pour garder un identifiant stable d'une partie à l'autre.
-    const joueurs: Joueur[] = noms.map(
-      (nom) => sauvegarde.joueurs.find((connu) => memeNom(connu.nom, nom)) ?? { id: crypto.randomUUID(), nom },
-    );
-    const nouveaux = joueurs.filter((joueur) => !sauvegarde.joueurs.includes(joueur));
-    const partie = creerPartie(joueurs, new Date());
-    modifier({
-      ...sauvegarde,
-      joueurs: [...sauvegarde.joueurs, ...nouveaux],
-      parties: [...sauvegarde.parties, partie],
-    });
+  function ajouterJoueur(nom: string): Joueur {
+    const joueur = { id: crypto.randomUUID(), nom };
+    modifier({ ...sauvegarde, joueurs: [...sauvegarde.joueurs, joueur] });
+    return joueur;
+  }
+
+  function commencer(description: string, joueurs: Joueur[]) {
+    const partie = creerPartie(joueurs, description, new Date());
+    modifier({ ...sauvegarde, parties: [...sauvegarde.parties, partie] });
     setEcran({ nom: 'tableau', partieId: partie.id });
   }
 
@@ -51,7 +48,15 @@ export default function App() {
   }
 
   if (ecran.nom === 'nouvelle-partie') {
-    return <NouvellePartie onCommencer={commencer} onRetour={() => setEcran({ nom: 'accueil' })} />;
+    return (
+      <NouvellePartie
+        joueurs={sauvegarde.joueurs}
+        descriptionParDefaut={descriptionDuJour(new Date())}
+        onAjouterJoueur={ajouterJoueur}
+        onCommencer={commencer}
+        onRetour={() => setEcran({ nom: 'accueil' })}
+      />
+    );
   }
 
   const partie = 'partieId' in ecran ? sauvegarde.parties.find((autre) => autre.id === ecran.partieId) : undefined;
