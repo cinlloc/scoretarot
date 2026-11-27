@@ -38,13 +38,21 @@ export default function App() {
     setEcran({ nom: 'tableau', partieId: partie.id });
   }
 
-  function ajouterDonne(partie: Partie, donne: Donne) {
-    const misAJour = { ...partie, donnes: [...partie.donnes, donne] };
+  function remplacerPartie(misAJour: Partie) {
     modifier({
       ...sauvegarde,
-      parties: sauvegarde.parties.map((autre) => (autre.id === partie.id ? misAJour : autre)),
+      parties: sauvegarde.parties.map((autre) => (autre.id === misAJour.id ? misAJour : autre)),
     });
+  }
+
+  function ajouterDonne(partie: Partie, donne: Donne) {
+    remplacerPartie({ ...partie, donnes: [...partie.donnes, donne] });
     setEcran({ nom: 'tableau', partieId: partie.id });
+  }
+
+  function terminer(partie: Partie) {
+    remplacerPartie({ ...partie, statut: 'terminee' });
+    setEcran({ nom: 'accueil' });
   }
 
   if (ecran.nom === 'nouvelle-partie') {
@@ -67,6 +75,8 @@ export default function App() {
         partie={partie}
         noms={nomsDe(partie)}
         onNouvelleDonne={() => setEcran({ nom: 'donne', partieId: partie.id })}
+        onSupprimerDerniereDonne={() => remplacerPartie({ ...partie, donnes: partie.donnes.slice(0, -1) })}
+        onTerminer={() => terminer(partie)}
         onRetour={() => setEcran({ nom: 'accueil' })}
       />
     );
@@ -85,12 +95,12 @@ export default function App() {
     );
   }
 
-  const partieEnCours = sauvegarde.parties.filter((autre) => autre.statut === 'en-cours').at(-1);
   return (
     <Accueil
-      partieEnCours={partieEnCours}
+      parties={sauvegarde.parties}
+      nomsDe={nomsDe}
       onNouvellePartie={() => setEcran({ nom: 'nouvelle-partie' })}
-      onReprendre={(choisie) => setEcran({ nom: 'tableau', partieId: choisie.id })}
+      onOuvrir={(choisie) => setEcran({ nom: 'tableau', partieId: choisie.id })}
     />
   );
 }

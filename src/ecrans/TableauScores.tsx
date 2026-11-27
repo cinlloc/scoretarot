@@ -1,26 +1,31 @@
+import { useState } from 'react';
 import { calculerDonne } from '../moteur/calculerDonne';
-import { calculerTotaux, ENCHERES, type Partie } from '../partie/partie';
-import { EnTeteEcran } from './commun';
-import { BOUTON_OR, couleurVariation, signe } from './format';
+import { calculerTotaux, ENCHERES, meneurs, type Partie } from '../partie/partie';
+import { Confirmation, EnTeteEcran } from './commun';
+import { BOUTON_OR, BOUTON_SECONDAIRE, couleurVariation, formaterDate, nombreDeDonnes, signe } from './format';
 
-export function TableauScores({ partie, noms, onNouvelleDonne, onRetour }: {
+export function TableauScores({ partie, noms, onNouvelleDonne, onSupprimerDerniereDonne, onTerminer, onRetour }: {
   partie: Partie;
   noms: string[];
   onNouvelleDonne: () => void;
+  onSupprimerDerniereDonne: () => void;
+  onTerminer: () => void;
   onRetour: () => void;
 }) {
+  const [aConfirmer, setAConfirmer] = useState<'supprimer' | 'terminer' | null>(null);
   const totaux = calculerTotaux(partie);
   const meilleur = Math.max(...totaux);
-  const meneurs = totaux.flatMap((total, joueur) => (total === meilleur ? [joueur] : []));
+  const enTete = meneurs(partie);
   const nombreDonnes = partie.donnes.length;
+  const enCours = partie.statut === 'en-cours';
 
   let annonceTete = 'Aucune donne pour l’instant';
-  if (nombreDonnes > 0 && meneurs.length === 1) {
-    const deuxieme = Math.max(...totaux.filter((_, joueur) => joueur !== meneurs[0]));
+  if (enTete.length === 1) {
+    const deuxieme = Math.max(...totaux.filter((_, joueur) => joueur !== enTete[0]));
     const ecart = meilleur - deuxieme;
-    annonceTete = `${noms[meneurs[0]]} mène de ${ecart} point${ecart > 1 ? 's' : ''}`;
+    annonceTete = `${noms[enTete[0]]} mène de ${ecart} point${ecart > 1 ? 's' : ''}`;
   }
-  if (nombreDonnes > 0 && meneurs.length > 1) {
+  if (enTete.length > 1) {
     annonceTete = `Égalité en tête à ${signe(meilleur)}`;
   }
 
@@ -30,12 +35,15 @@ export function TableauScores({ partie, noms, onNouvelleDonne, onRetour }: {
 
   return (
     <main className="mx-auto flex h-dvh max-w-xl flex-col gap-4 px-4 py-6">
-      <EnTeteEcran titre={partie.description} onRetour={onRetour} libelleRetour="Retour à l'accueil" />
+      <EnTeteEcran
+        titre={partie.description}
+        sousTitre={enCours ? formaterDate(partie.date) : `Terminée · ${formaterDate(partie.date)}`}
+        onRetour={onRetour}
+        libelleRetour="Retour à l'accueil"
+      />
       <p className="flex justify-between text-sm font-semibold text-attenue">
         <span className="text-texte">{annonceTete}</span>
-        <span>
-          {nombreDonnes} donne{nombreDonnes > 1 ? 's' : ''}
-        </span>
+        <span>{nombreDeDonnes(nombreDonnes)}</span>
       </p>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl bg-feuille text-feuille-encre">
@@ -67,7 +75,7 @@ export function TableauScores({ partie, noms, onNouvelleDonne, onRetour }: {
                 {totaux.map((total, joueur) => (
                   <td
                     key={joueur}
-                    className={`px-1 pb-2 text-right font-mono text-sm font-extrabold last:pr-3 ${meneurs.includes(joueur) && nombreDonnes > 0 ? 'text-or-encre' : ''}`}
+                    className={`px-1 pb-2 text-right font-mono text-sm font-extrabold last:pr-3 ${enTete.includes(joueur) ? 'text-or-encre' : ''}`}
                   >
                     {signe(total)}
                   </td>
@@ -102,9 +110,44 @@ export function TableauScores({ partie, noms, onNouvelleDonne, onRetour }: {
         )}
       </div>
 
-      <button type="button" className={BOUTON_OR} onClick={onNouvelleDonne}>
-        Nouvelle donne
-      </button>
+      {enCours && aConfirmer === 'terminer' && (
+        <Confirmation
+          question="Terminer la partie ?"
+          detail="Elle passera dans les parties terminées : on ne pourra plus y ajouter de donne."
+          libelleConfirmer="Terminer"
+          onConfirmer={onTerminer}
+          onAnnuler={() => setAConfirmer(null)}
+        />
+      )}
+      {enCours && aConfirmer === 'supprimer' && (
+        <Confirmation
+          question={`Supprimer la donne ${nombreDonnes} ?`}
+          detail="Les totaux seront recalculés sans elle."
+          libelleConfirmer="Supprimer"
+          onConfirmer={() => {
+            setAConfirmer(null);
+            onSupprimerDerniereDonne();
+          }}
+          onAnnuler={() => setAConfirmer(null)}
+        />
+      )}
+      {enCours && aConfirmer === null && (
+        <div className="flex flex-col gap-2">
+          <button type="button" className={BOUTON_OR} onClick={onNouvelleDonne}>
+            Nouvelle donne
+          </button>
+          <div className="flex gap-2">
+            {nombreDonnes > 0 && (
+              <button type="button" className={BOUTON_SECONDAIRE} onClick={() => setAConfirmer('supprimer')}>
+                Supprimer la dernière donne
+              </button>
+            )}
+            <button type="button" className={BOUTON_SECONDAIRE} onClick={() => setAConfirmer('terminer')}>
+              Terminer la partie
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
