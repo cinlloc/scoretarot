@@ -17,6 +17,9 @@
   --creux: rgb(0 0 0 / 0.28);
   --or: #e4b84e;
   --sur-or: #18231d;
+  /* début du dégradé de la jauge, et or lisible sur la feuille claire */
+  --or-sombre: #c99a2e;
+  --or-encre: #9a6b05;
   --feuille: #f7f4ec;
   --feuille-encre: #18231d;
   --feuille-attenue: #6c7468;
@@ -64,6 +67,8 @@
   --color-creux: var(--creux);
   --color-or: var(--or);
   --color-sur-or: var(--sur-or);
+  --color-or-sombre: var(--or-sombre);
+  --color-or-encre: var(--or-encre);
   --color-feuille: var(--feuille);
   --color-feuille-encre: var(--feuille-encre);
   --color-feuille-attenue: var(--feuille-attenue);
