@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { calculerDonne, type Donne } from '../moteur/calculerDonne';
+import { useState, type ReactNode } from 'react';
+import { calculerDonne, PRIME_PAR_POIGNEE, primeChelem, SEUILS_POIGNEE, type Donne } from '../moteur/calculerDonne';
 import { ENCHERES } from '../partie/partie';
 import { Avatar, EnTeteEcran, Etiquette } from './commun';
+import { couleurVariation, signe } from './format';
 
 const POINTS_TOTAL = 91;
 
@@ -10,6 +11,66 @@ const BOUTS: { cle: keyof Donne['bouts']; glyphe: string; libelle: string }[] = 
   { cle: 'vingtEtUn', glyphe: '21', libelle: '21' },
   { cle: 'excuse', glyphe: '★', libelle: 'Excuse' },
 ];
+
+const PETIT_AU_BOUT: { camp: Donne['petitAuBout']; glyphe: string; libelle: string }[] = [
+  { camp: null, glyphe: '', libelle: 'Aucun' },
+  { camp: 'attaque', glyphe: '⚔', libelle: 'Attaque' },
+  { camp: 'defense', glyphe: '🛡', libelle: 'Défense' },
+];
+
+const POIGNEES: { poignee: NonNullable<Donne['poignee']>; libelle: string }[] = [
+  { poignee: 'simple', libelle: 'Simple' },
+  { poignee: 'double', libelle: 'Double' },
+  { poignee: 'triple', libelle: 'Triple' },
+];
+
+// Ouverture totale de l'éventail, en degrés, quel que soit le nombre d'atouts.
+const OUVERTURE_EVENTAIL = 40;
+
+function EventailAtouts({ nombre }: { nombre: number }) {
+  return (
+    <span aria-hidden="true" className="flex h-6 items-end pl-1">
+      {Array.from({ length: nombre }, (_, carte) => (
+        <i
+          key={carte}
+          className="-ml-[3px] h-5 w-[7px] origin-bottom rounded-[2px] border border-black/35 bg-feuille"
+          style={{ transform: `rotate(${(carte - (nombre - 1) / 2) * (OUVERTURE_EVENTAIL / nombre)}deg)` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function InterrupteurChelem({ glyphe, libelle, actif, onBasculer }: {
+  glyphe: string;
+  libelle: string;
+  actif: boolean;
+  onBasculer: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={actif}
+      onClick={onBasculer}
+      className={`inline-flex items-center gap-1.5 rounded-full border-[1.5px] px-3 py-2 text-sm font-bold ${actif ? 'border-or bg-or text-sur-or' : 'border-trait'}`}
+    >
+      <span aria-hidden="true">{glyphe}</span>
+      {libelle}
+    </button>
+  );
+}
+
+function LigneAnnonce({ titre, detail, children }: { titre: string; detail: string; children: ReactNode }) {
+  return (
+    <div>
+      <h2 className="mb-1.5 flex justify-between text-sm font-bold">
+        {titre}
+        <span className="font-semibold text-attenue">{detail}</span>
+      </h2>
+      {children}
+    </div>
+  );
+}
 
 export function SaisieDonne({ noms, numero, description, donneInitiale, onEnregistrer, onRetour }: {
   noms: string[];
@@ -40,6 +101,19 @@ export function SaisieDonne({ noms, numero, description, donneInitiale, onEnregi
   function changerPoints(points: number) {
     setDonne({ ...donne, pointsAttaque: Math.min(POINTS_TOTAL, Math.max(0, points)) });
   }
+
+  const libelleEnchere = ENCHERES.find((choix) => choix.enchere === donne.enchere)?.libelle;
+
+  const primePetitAuBout = 10 * resultat.multiplicateur;
+  let detailPetitAuBout = `${primePetitAuBout} points`;
+  if (donne.petitAuBout === 'attaque') {
+    detailPetitAuBout = `${signe(primePetitAuBout)} par défenseur`;
+  }
+  if (donne.petitAuBout === 'defense') {
+    detailPetitAuBout = `${signe(-primePetitAuBout)} par défenseur`;
+  }
+
+  const chelem = primeChelem(donne.chelem);
 
   const tapis = resultat.faite ? 'from-tapis-vif to-tapis-vif-fonce' : 'from-tapis to-tapis-fonce';
   const remplissage = resultat.faite ? 'bg-linear-to-r from-or-sombre to-or' : 'bg-voile-fort';
@@ -197,9 +271,96 @@ export function SaisieDonne({ noms, numero, description, donneInitiale, onEnregi
               </button>
             </div>
           </section>
+
+          <section className="flex flex-col gap-4">
+            <Etiquette>Annonces</Etiquette>
+
+            <LigneAnnonce titre="Petit au bout" detail={detailPetitAuBout}>
+              <div role="group" aria-label="Petit au bout" className="flex overflow-hidden rounded-xl border-[1.5px] border-trait">
+                {PETIT_AU_BOUT.map((choix) => {
+                  const choisi = choix.camp === donne.petitAuBout;
+                  return (
+                    <button
+                      key={choix.libelle}
+                      type="button"
+                      aria-pressed={choisi}
+                      onClick={() => setDonne({ ...donne, petitAuBout: choix.camp })}
+                      className={`flex flex-1 items-center justify-center gap-1.5 px-1.5 py-2 text-sm font-bold not-first:border-l-[1.5px] not-first:border-trait ${choisi ? 'bg-or text-sur-or' : ''}`}
+                    >
+                      {choix.glyphe && <span aria-hidden="true">{choix.glyphe}</span>}
+                      {choix.libelle}
+                    </button>
+                  );
+                })}
+              </div>
+            </LigneAnnonce>
+
+            <LigneAnnonce titre="Poignée" detail="au camp gagnant">
+              <div role="group" aria-label="Poignée" className="grid grid-cols-3 gap-2">
+                {POIGNEES.map((poignee) => {
+                  const choisie = poignee.poignee === donne.poignee;
+                  const atouts = SEUILS_POIGNEE[nombreJoueurs][poignee.poignee];
+                  return (
+                    <button
+                      key={poignee.poignee}
+                      type="button"
+                      aria-pressed={choisie}
+                      onClick={() => setDonne({ ...donne, poignee: choisie ? null : poignee.poignee })}
+                      className={`flex flex-col items-center gap-1 rounded-xl border-[1.5px] px-1 py-2 text-xs font-bold ${choisie ? 'border-or bg-or/20' : 'border-trait'}`}
+                    >
+                      <EventailAtouts nombre={atouts} />
+                      <b className="text-sm">{poignee.libelle}</b> {atouts} atouts · {PRIME_PAR_POIGNEE[poignee.poignee]}
+                    </button>
+                  );
+                })}
+              </div>
+            </LigneAnnonce>
+
+            <LigneAnnonce titre="Chelem" detail={chelem === 0 ? '—' : signe(chelem)}>
+              <div role="group" aria-label="Chelem" className="flex gap-2">
+                <InterrupteurChelem
+                  glyphe="⚑"
+                  libelle="Annoncé"
+                  actif={donne.chelem.annonce}
+                  onBasculer={() => setDonne({ ...donne, chelem: { ...donne.chelem, annonce: !donne.chelem.annonce } })}
+                />
+                <InterrupteurChelem
+                  glyphe="✓"
+                  libelle="Réussi"
+                  actif={donne.chelem.reussi}
+                  onBasculer={() => setDonne({ ...donne, chelem: { ...donne.chelem, reussi: !donne.chelem.reussi } })}
+                />
+              </div>
+            </LigneAnnonce>
+          </section>
         </main>
 
         <footer className="sticky bottom-0 flex flex-col gap-3 rounded-t-3xl bg-feuille px-4 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-feuille-encre shadow-[0_-4px_20px_rgb(0_0_0/0.12)]">
+          <div aria-live="polite" className="flex items-center justify-between gap-2 font-extrabold">
+            <span>
+              {libelleEnchere} {resultat.faite ? 'faite' : 'chutée'} de {resultat.ecart}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-sm ${resultat.faite ? 'bg-or text-sur-or' : 'bg-feuille-trait'}`}
+            >
+              <span aria-hidden="true">{resultat.faite ? '✓' : '✗'}</span>
+              {signe(resultat.valeur)} / défenseur
+            </span>
+          </div>
+          <ul
+            aria-label="Variations"
+            className="grid gap-1 text-center text-xs font-semibold"
+            style={{ gridTemplateColumns: `repeat(${nombreJoueurs}, minmax(0, 1fr))` }}
+          >
+            {noms.map((nom, joueur) => (
+              <li key={joueur} className="min-w-0">
+                <span className="block truncate">{nom}</span>
+                <b className={`font-mono text-sm ${couleurVariation(resultat.variations[joueur])}`}>
+                  {signe(resultat.variations[joueur])}
+                </b>
+              </li>
+            ))}
+          </ul>
           <button
             type="button"
             onClick={() => onEnregistrer(donne)}

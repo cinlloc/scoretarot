@@ -8,5 +8,16 @@ export function signe(nombre: number): string {
   return '0';
 }
 
+// Teintes foncées : la feuille reste claire, même en thème sombre.
+export function couleurVariation(nombre: number): string {
+  if (nombre > 0) {
+    return 'text-gain-feuille';
+  }
+  if (nombre < 0) {
+    return 'text-perte-feuille';
+  }
+  return '';
+}
+
 export const BOUTON_OR =
   'flex w-full items-center justify-center gap-2 rounded-2xl bg-or p-4 text-base font-extrabold text-sur-or disabled:cursor-not-allowed disabled:opacity-45';

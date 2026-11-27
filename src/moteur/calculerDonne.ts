@@ -35,7 +35,20 @@ const MULTIPLICATEUR_PAR_ENCHERE: Record<Donne['enchere'], number> = {
   'garde-contre': 6,
 };
 
-const PRIME_PAR_POIGNEE = { simple: 20, double: 30, triple: 40 };
+export const PRIME_PAR_POIGNEE: Record<NonNullable<Donne['poignee']>, number> = { simple: 20, double: 30, triple: 40 };
+
+export function primeChelem(chelem: Donne['chelem']): number {
+  if (chelem.annonce && chelem.reussi) {
+    return 400;
+  }
+  if (chelem.annonce && !chelem.reussi) {
+    return -200;
+  }
+  if (!chelem.annonce && chelem.reussi) {
+    return 200;
+  }
+  return 0;
+}
 
 export function calculerDonne(donne: Donne, nombreJoueurs: number): ResultatDonne {
   const { petit, vingtEtUn, excuse } = donne.bouts;
@@ -56,15 +69,7 @@ export function calculerDonne(donne: Donne, nombreJoueurs: number): ResultatDonn
     const primePoignee = PRIME_PAR_POIGNEE[donne.poignee];
     valeur += faite ? primePoignee : -primePoignee;
   }
-  if (donne.chelem.annonce && donne.chelem.reussi) {
-    valeur += 400;
-  }
-  if (donne.chelem.annonce && !donne.chelem.reussi) {
-    valeur -= 200;
-  }
-  if (!donne.chelem.annonce && donne.chelem.reussi) {
-    valeur += 200;
-  }
+  valeur += primeChelem(donne.chelem);
   const variations = repartir(valeur, donne, nombreJoueurs);
   return { nombreBouts, seuil, faite, ecart, multiplicateur, valeur, variations };
 }
