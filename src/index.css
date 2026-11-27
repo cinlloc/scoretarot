@@ -1,0 +1,84 @@
+@import 'tailwindcss';
+
+/* Jetons « table de jeu » : sombre par défaut, clair selon le thème système. */
+:root {
+  color-scheme: dark;
+
+  --tapis: #2f3e37;
+  --tapis-fonce: #1b2621;
+  /* tapis plus vif quand l'attaque atteint le seuil */
+  --tapis-vif: #16704a;
+  --tapis-vif-fonce: #0a3a25;
+  --texte: #eaf3ee;
+  --attenue: #a7bcb1;
+  --trait: rgb(255 255 255 / 0.18);
+  --voile: rgb(255 255 255 / 0.08);
+  --voile-fort: rgb(255 255 255 / 0.16);
+  --creux: rgb(0 0 0 / 0.28);
+  --or: #e4b84e;
+  --sur-or: #18231d;
+  --feuille: #f7f4ec;
+  --feuille-encre: #18231d;
+  --feuille-attenue: #6c7468;
+  --feuille-trait: #e3ddcc;
+  --gain: #7fe0ae;
+  --perte: #ff9aa2;
+  --gain-feuille: #127a4a;
+  --perte-feuille: #b4232f;
+  --action: #145a3c;
+  --sur-action: #ffffff;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+
+    --tapis: #f1f5f2;
+    --tapis-fonce: #e1eae4;
+    --tapis-vif: #e2f3e8;
+    --tapis-vif-fonce: #c9e6d3;
+    --texte: #13261b;
+    --attenue: #5b7064;
+    --trait: rgb(19 60 38 / 0.2);
+    --voile: rgb(19 60 38 / 0.05);
+    --voile-fort: rgb(19 60 38 / 0.1);
+    --creux: rgb(19 60 38 / 0.1);
+    --or: #e0ad3c;
+    --feuille: #ffffff;
+    --feuille-trait: #e6ebe7;
+    --gain: #127a4a;
+    --perte: #b4232f;
+  }
+}
+
+@theme inline {
+  --color-tapis: var(--tapis);
+  --color-tapis-fonce: var(--tapis-fonce);
+  --color-tapis-vif: var(--tapis-vif);
+  --color-tapis-vif-fonce: var(--tapis-vif-fonce);
+  --color-texte: var(--texte);
+  --color-attenue: var(--attenue);
+  --color-trait: var(--trait);
+  --color-voile: var(--voile);
+  --color-voile-fort: var(--voile-fort);
+  --color-creux: var(--creux);
+  --color-or: var(--or);
+  --color-sur-or: var(--sur-or);
+  --color-feuille: var(--feuille);
+  --color-feuille-encre: var(--feuille-encre);
+  --color-feuille-attenue: var(--feuille-attenue);
+  --color-feuille-trait: var(--feuille-trait);
+  --color-gain: var(--gain);
+  --color-perte: var(--perte);
+  --color-gain-feuille: var(--gain-feuille);
+  --color-perte-feuille: var(--perte-feuille);
+  --color-action: var(--action);
+  --color-sur-action: var(--sur-action);
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(120% 80% at 50% 0%, var(--tapis) 0%, var(--tapis-fonce) 100%) fixed;
+  background-color: var(--tapis-fonce);
+  color: var(--texte);
+}
