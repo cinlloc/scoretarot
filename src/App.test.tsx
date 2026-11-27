@@ -169,6 +169,146 @@ test('les donnes vont de la plus récente à la plus ancienne et rappellent pren
   expect(lignes[1]).toHaveTextContent(/^1 ⚔ Alice P ✓/);
 });
 
+function annonce(groupe: string, choix: string) {
+  return within(screen.getByRole('group', { name: groupe })).getByRole('button', { name: new RegExp(choix) });
+}
+
+// Garde, Petit et 21 : la base commune des cas de référence de la spec.
+async function saisirGardeDeuxBouts(utilisateur: Utilisateur, points: number) {
+  await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle donne' }));
+  await utilisateur.click(screen.getByRole('button', { name: 'Garde ×2' }));
+  await utilisateur.click(screen.getByRole('button', { name: 'Petit' }));
+  await utilisateur.click(screen.getByRole('button', { name: '21' }));
+  reglerPoints(points);
+}
+
+test('à 4, un petit au bout attaque sur une garde faite de 6 ajoute 20 par défenseur au tableau', async () => {
+  const utilisateur = userEvent.setup();
+  render(<App />);
+  await creerPartie(utilisateur, ['Alice', 'Bruno', 'Chloé', 'David']);
+  await saisirGardeDeuxBouts(utilisateur, 47);
+
+  await utilisateur.click(annonce('Petit au bout', 'Attaque'));
+
+  expect(screen.getByText('+20 par défenseur')).toBeInTheDocument();
+
+  await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer la donne' }));
+
+  expect(totalDe('Alice')).toBe('+246');
+  expect(totalDe('Bruno')).toBe('−82');
+  expect(totalDe('Chloé')).toBe('−82');
+  expect(totalDe('David')).toBe('−82');
+});
+
+test('une poignée simple sur une garde chutée de 1 donne −72 par défenseur', async () => {
+  const utilisateur = userEvent.setup();
+  render(<App />);
+  await creerPartie(utilisateur, ['Alice', 'Bruno', 'Chloé', 'David']);
+  await saisirGardeDeuxBouts(utilisateur, 40);
+
+  await utilisateur.click(annonce('Poignée', 'Simple'));
+
+  expect(screen.getByText('Garde chutée de 1')).toBeInTheDocument();
+  expect(screen.getByText('−72 / défenseur')).toBeInTheDocument();
+
+  await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer la donne' }));
+
+  expect(totalDe('Alice')).toBe('−216');
+  expect(totalDe('Bruno')).toBe('+72');
+  expect(totalDe('Chloé')).toBe('+72');
+  expect(totalDe('David')).toBe('+72');
+});
+
+test('à 3, un chelem annoncé et réussi sur une garde à 91 points vaut 550 par défenseur', async () => {
+  const utilisateur = userEvent.setup();
+  render(<App />);
+  await creerPartie(utilisateur, ['Alice', 'Bruno', 'Chloé']);
+  await saisirGardeDeuxBouts(utilisateur, 91);
+
+  await utilisateur.click(annonce('Chelem', 'Annoncé'));
+  await utilisateur.click(annonce('Chelem', 'Réussi'));
+  await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer la donne' }));
+
+  expect(totalDe('Alice')).toBe('+1100');
+  expect(totalDe('Bruno')).toBe('−550');
+  expect(totalDe('Chloé')).toBe('−550');
+});
+
+test('à 3, un chelem annoncé et raté sur une garde à 60 points vaut −112 par défenseur', async () => {
+  const utilisateur = userEvent.setup();
+  render(<App />);
+  await creerPartie(utilisateur, ['Alice', 'Bruno', 'Chloé']);
+  await saisirGardeDeuxBouts(utilisateur, 60);
+
+  await utilisateur.click(annonce('Chelem', 'Annoncé'));
+  await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer la donne' }));
+
+  expect(totalDe('Alice')).toBe('−224');
+  expect(totalDe('Bruno')).toBe('+112');
+  expect(totalDe('Chloé')).toBe('+112');
+});
+
+function variationAffichee(nom: string) {
+  const variations = within(screen.getByRole('list', { name: 'Variations' })).getAllByRole('listitem');
+  const caseDuJoueur = variations.find((element) => within(element).queryByText(nom));
+  return caseDuJoueur?.lastElementChild?.textContent;
+}
+
+test('le pied d’écran suit chaque changement de la saisie, sans enregistrer la donne', async () => {
+  const utilisateur = userEvent.setup();
+  render(<App />);
+  await creerPartie(utilisateur, ['Alice', 'Bruno', 'Chloé', 'David']);
+  await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle donne' }));
+
+  expect(screen.getByText('Garde chutée de 10')).toBeInTheDocument();
+  expect(screen.getByText('−70 / défenseur')).toBeInTheDocument();
+  expect(variationAffichee('Alice')).toBe('−210');
+  expect(variationAffichee('Bruno')).toBe('+70');
+
+  reglerPoints(50);
+
+  expect(screen.getByText('Garde chutée de 6')).toBeInTheDocument();
+  expect(screen.getByText('−62 / défenseur')).toBeInTheDocument();
+  expect(variationAffichee('Alice')).toBe('−186');
+
+  await utilisateur.click(screen.getByRole('button', { name: 'Petit' }));
+  await utilisateur.click(screen.getByRole('button', { name: '21' }));
+
+  expect(screen.getByText('Garde faite de 9')).toBeInTheDocument();
+  expect(screen.getByText('+68 / défenseur')).toBeInTheDocument();
+  expect(variationAffichee('Alice')).toBe('+204');
+
+  await utilisateur.click(annonce('Poignée', 'Simple'));
+
+  expect(annonce('Poignée', 'Simple')).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByText('+88 / défenseur')).toBeInTheDocument();
+  expect(variationAffichee('David')).toBe('−88');
+
+  await utilisateur.click(annonce('Poignée', 'Simple'));
+
+  expect(annonce('Poignée', 'Simple')).toHaveAttribute('aria-pressed', 'false');
+  expect(screen.getByText('+68 / défenseur')).toBeInTheDocument();
+
+  await utilisateur.click(screen.getByRole('button', { name: 'Retour au tableau des scores' }));
+
+  expect(screen.getByText('0 donne')).toBeInTheDocument();
+});
+
+test.each([
+  [3, ['Alice', 'Bruno', 'Chloé'], ['13', '15', '18']],
+  [4, ['Alice', 'Bruno', 'Chloé', 'David'], ['10', '13', '15']],
+  [5, ['Alice', 'Bruno', 'Chloé', 'David', 'Emma'], ['8', '10', '13']],
+])('à %i joueurs, les poignées simple, double et triple montrent le bon nombre d’atouts', async (_, noms, atouts) => {
+  const utilisateur = userEvent.setup();
+  render(<App />);
+  await creerPartie(utilisateur, noms);
+  await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle donne' }));
+
+  expect(annonce('Poignée', 'Simple')).toHaveTextContent(`${atouts[0]} atouts · 20`);
+  expect(annonce('Poignée', 'Double')).toHaveTextContent(`${atouts[1]} atouts · 30`);
+  expect(annonce('Poignée', 'Triple')).toHaveTextContent(`${atouts[2]} atouts · 40`);
+});
+
 test('à 5, une tape sur le preneur le fait jouer seul', async () => {
   const utilisateur = userEvent.setup();
   render(<App />);

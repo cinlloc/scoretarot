@@ -1,17 +1,7 @@
 import { calculerDonne } from '../moteur/calculerDonne';
 import { calculerTotaux, ENCHERES, type Partie } from '../partie/partie';
 import { EnTeteEcran } from './commun';
-import { BOUTON_OR, signe } from './format';
-
-function couleur(nombre: number) {
-  if (nombre > 0) {
-    return 'text-gain-feuille';
-  }
-  if (nombre < 0) {
-    return 'text-perte-feuille';
-  }
-  return '';
-}
+import { BOUTON_OR, couleurVariation, signe } from './format';
 
 export function TableauScores({ partie, noms, onNouvelleDonne, onRetour }: {
   partie: Partie;
@@ -99,7 +89,7 @@ export function TableauScores({ partie, noms, onNouvelleDonne, onRetour }: {
                     {resultat.variations.map((variation, joueur) => (
                       <td
                         key={joueur}
-                        className={`px-1 py-2 text-right font-mono text-sm last:pr-3 ${couleur(variation)} ${joueur === donne.preneur ? 'bg-or/20 font-bold' : ''}`}
+                        className={`px-1 py-2 text-right font-mono text-sm last:pr-3 ${couleurVariation(variation)} ${joueur === donne.preneur ? 'bg-or/20 font-bold' : ''}`}
                       >
                         {signe(variation)}
                       </td>
