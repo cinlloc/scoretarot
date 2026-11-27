@@ -3,7 +3,7 @@ name: Deploy React to GitHub Pages
 on:
   push:
     branches:
-      - gh-pages
+      - main
 
 jobs:
   build:
@@ -17,12 +17,14 @@ jobs:
           node-version: '22'
       - name: Install Dependencies
         run: npm ci
+      - name: Test
+        run: npm test
       - name: Build
         run: npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'build/client/.'
+          path: 'dist'
   deploy:
     needs: build
     runs-on: ubuntu-latest

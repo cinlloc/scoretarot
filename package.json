@@ -1,34 +1,32 @@
 {
   "name": "scoretarot",
-  "private": false,
+  "private": true,
   "homepage": "https://cinlloc.github.io/scoretarot/",
   "type": "module",
   "scripts": {
-    "build": "react-router build",
-    "dev": "react-router dev",
-    "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
-    "@fontsource/roboto": "^5.2.5",
-    "@mui/icons-material": "^6.4.7",
-    "@mui/material": "^6.4.7",
-    "@react-router/node": "^7.3.0",
-    "@react-router/serve": "^7.3.0",
-    "isbot": "^5.1.17",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router": "^7.3.0"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@react-router/dev": "^7.3.0",
-    "@types/node": "^20",
-    "@types/react": "^19.0.1",
-    "@types/react-dom": "^19.0.1",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.11",
-    "vite-tsconfig-paths": "^5.1.4"
+    "@tailwindcss/vite": "^4.3.5",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^8.0.0",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.6.11",
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "jsdom": "^29.1.1",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.4.0",
+    "vitest": "^5.1.2"
   }
 }
