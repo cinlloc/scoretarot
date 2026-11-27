@@ -459,6 +459,136 @@ test.each([
   expect(annonce('Poignée', 'Triple')).toHaveTextContent(`${atouts[2]} atouts · 40`);
 });
 
+// Donne par défaut à 3 (Alice garde avec 46 points, sans bout) : chutée de 10, Alice −140, les autres +70.
+async function saisirDonneParDefaut(utilisateur: Utilisateur) {
+  await utilisateur.click(screen.getByRole('button', { name: 'Nouvelle donne' }));
+  await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer la donne' }));
+}
+
+function carteEnCours(description: string) {
+  return within(screen.getByRole('region', { name: 'En cours' })).getByRole('article', { name: description });
+}
+
+function partiesTerminees() {
+  return within(screen.getByRole('region', { name: 'Terminées' })).queryAllByRole('listitem');
+}
+
+describe('accueil et parties', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 26, 20, 30));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("à l'ouverture, la partie en cours et son classement sont affichés, et un toucher ouvre son tableau", async () => {
+    const utilisateur = userEvent.setup();
+    const { unmount } = render(<App />);
+    await creerPartie(utilisateur, ['Alice', 'Bruno', 'Chloé']);
+    await saisirDonneParDefaut(utilisateur);
+    unmount();
+
+    render(<App />);
+
+    const carte = carteEnCours('Partie du jeudi 26 novembre');
+    expect(carte).toHaveTextContent('26 nov. 2026 · 1 donne');
+    const classement = within(within(carte).getByRole('list', { name: 'Classement' })).getAllByRole('listitem');
+    expect(classement).toHaveLength(3);
+    expect(classement[0]).toHaveTextContent(/Bruno\+70$/);
+    expect(classement[1]).toHaveTextContent(/Chloé\+70$/);
+    expect(classement[2]).toHaveTextContent(/Alice−140$/);
+
+    await utilisateur.click(within(carte).getByRole('button', { name: /Reprendre/ }));
+
+    expect(screen.getByRole('heading', { name: 'Partie du jeudi 26 novembre' })).toBeInTheDocument();
+    expect(totalDe('Alice')).toBe('−140');
+  });
+
+  test('terminer une partie la fait passer dans « Terminées » avec son gagnant, même après un nouveau rendu', async () => {
+    const utilisateur = userEvent.setup();
+    const { unmount } = render(<App />);
+    await creerPartie(utilisateur, ['Alice', 'Bruno', 'Chloé']);
+    // Alice puis Bruno prennent et chutent : Chloé finit seule en tête.
+    await saisirDonneParDefaut(utilisateur);
+    await saisirDonneParDefaut(utilisateur);
+
+    await utilisateur.click(screen.getByRole('button', { name: 'Terminer la partie' }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Annuler' }));
+    expect(screen.getByRole('button', { name: 'Nouvelle donne' })).toBeInTheDocument();
+
+    await utilisateur.click(screen.getByRole('button', { name: 'Terminer la partie' }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Terminer' }));
+    unmount();
+    render(<App />);
+
+    expect(screen.queryByRole('region', { name: 'En cours' })).not.toBeInTheDocument();
+    const terminees = partiesTerminees();
+    expect(terminees).toHaveLength(1);
+    expect(terminees[0]).toHaveTextContent('Partie du jeudi 26 novembre');
+    expect(terminees[0]).toHaveTextContent('26 nov. 2026 · 3 joueurs · 2 donnes');
+    expect(terminees[0]).toHaveTextContent(/Gagnant : Chloé$/);
+  });
+
+  test('une partie terminée se rouvre en consultation, sans saisie ni suppression', async () => {
+    const utilisateur = userEvent.setup();
+    const { unmount } = render(<App />);
+    await creerPartie(utilisateur, ['Alice', 'Bruno', 'Chloé']);
+    await saisirDonneParDefaut(utilisateur);
+    await utilisateur.click(screen.getByRole('button', { name: 'Terminer la partie' }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Terminer' }));
+    unmount();
+    render(<App />);
+
+    await utilisateur.click(within(partiesTerminees()[0]).getByRole('button'));
+
+    expect(screen.getByRole('heading', { name: 'Partie du jeudi 26 novembre' })).toBeInTheDocument();
+    expect(totalDe('Alice')).toBe('−140');
+    expect(totalDe('Bruno')).toBe('+70');
+    expect(screen.queryByRole('button', { name: 'Nouvelle donne' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Terminer/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Supprimer/ })).not.toBeInTheDocument();
+
+    await utilisateur.click(screen.getByRole('button', { name: "Retour à l'accueil" }));
+
+    expect(partiesTerminees()).toHaveLength(1);
+  });
+
+  test("supprimer la dernière donne, après confirmation dans l'écran, met à jour les totaux ; les plus anciennes ne sont pas supprimables", async () => {
+    const utilisateur = userEvent.setup();
+    const { unmount } = render(<App />);
+    await creerPartie(utilisateur, ['Alice', 'Bruno', 'Chloé']);
+    await saisirDonneParDefaut(utilisateur);
+    await saisirDonneParDefaut(utilisateur);
+
+    expect(totalDe('Chloé')).toBe('+140');
+    expect(screen.getAllByRole('button', { name: /Supprimer/ })).toHaveLength(1);
+    expect(within(screen.getByRole('table')).queryAllByRole('button')).toHaveLength(0);
+
+    await utilisateur.click(screen.getByRole('button', { name: 'Supprimer la dernière donne' }));
+    const confirmation = screen.getByRole('group', { name: 'Supprimer la donne 2 ?' });
+    await utilisateur.click(within(confirmation).getByRole('button', { name: 'Annuler' }));
+
+    expect(screen.getByText('2 donnes')).toBeInTheDocument();
+
+    await utilisateur.click(screen.getByRole('button', { name: 'Supprimer la dernière donne' }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Supprimer' }));
+
+    expect(screen.getByText('1 donne')).toBeInTheDocument();
+    expect(totalDe('Alice')).toBe('−140');
+    expect(totalDe('Bruno')).toBe('+70');
+    expect(totalDe('Chloé')).toBe('+70');
+
+    unmount();
+    render(<App />);
+    await utilisateur.click(screen.getByRole('button', { name: /Reprendre/ }));
+
+    expect(screen.getByText('1 donne')).toBeInTheDocument();
+    expect(totalDe('Alice')).toBe('−140');
+  });
+});
+
 test('à 5, une tape sur le preneur le fait jouer seul', async () => {
   const utilisateur = userEvent.setup();
   render(<App />);

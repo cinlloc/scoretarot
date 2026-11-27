@@ -76,3 +76,13 @@ export function calculerTotaux(partie: Partie): number[] {
   }
   return totaux;
 }
+
+// Indices des joueurs en tête ; aucun tant qu'il n'y a pas de donne.
+export function meneurs(partie: Partie): number[] {
+  if (partie.donnes.length === 0) {
+    return [];
+  }
+  const totaux = calculerTotaux(partie);
+  const meilleur = Math.max(...totaux);
+  return totaux.flatMap((total, joueur) => (total === meilleur ? [joueur] : []));
+}

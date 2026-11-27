@@ -40,6 +40,32 @@ export function EnTeteEcran({ titre, sousTitre, onRetour, libelleRetour }: {
   );
 }
 
+export function Confirmation({ question, detail, libelleConfirmer, onConfirmer, onAnnuler }: {
+  question: string;
+  detail: string;
+  libelleConfirmer: string;
+  onConfirmer: () => void;
+  onAnnuler: () => void;
+}) {
+  return (
+    <div role="group" aria-label={question} className="flex flex-col gap-3 rounded-2xl border-[1.5px] border-or bg-voile p-4">
+      <p>
+        <b className="block">{question}</b>
+        <span className="text-sm text-attenue">{detail}</span>
+      </p>
+      <div className="flex gap-2">
+        {/* Le bouton qui a ouvert la confirmation disparaît : le focus doit rester dans l'écran. */}
+        <button type="button" onClick={onAnnuler} autoFocus className="flex-1 rounded-2xl border-[1.5px] border-trait p-3 font-bold">
+          Annuler
+        </button>
+        <button type="button" onClick={onConfirmer} className="flex-1 rounded-2xl bg-or p-3 font-extrabold text-sur-or">
+          {libelleConfirmer}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Etiquette({ children }: { children: ReactNode }) {
   return <p className="mb-2 text-xs font-bold tracking-widest text-attenue uppercase">{children}</p>;
 }
